@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Calculator</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="theme-color" content="#17181a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Privacy Shield: blanks/blurs recent apps snapshot -->
+  <div id="privacy-shield"></div>
+
+  <!-- App Container -->
+  <div id="app-root">
+    <!-- Calculator Disguise Screen -->
+    <div id="calculator-screen" class="calc-screen">
+      <!-- Two-line Display -->
+      <div class="calc-display-panel">
+        <div class="display-history-bar"></div>
+        <div id="expr-display" class="calc-expr-line" aria-live="polite"></div>
+        <div class="calc-result-row">
+          <div id="result-display" class="calc-result-line" aria-live="polite">0</div>
+          <button class="calc-btn calc-btn-backspace" data-action="backspace" aria-label="Backspace">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+              <line x1="18" y1="9" x2="12" y2="15"></line>
+              <line x1="12" y1="9" x2="18" y2="15"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Keypad -->
+      <div class="calc-keypad">
+        <button class="calc-btn btn-function" data-action="clear" aria-label="Clear All">AC</button>
+        <button class="calc-btn btn-function" data-action="paren" data-val="()" aria-label="Parentheses">( )</button>
+        <button class="calc-btn btn-function" data-action="percent" data-val="%" aria-label="Percent">%</button>
+        <button class="calc-btn btn-operator" data-action="op" data-val="÷" aria-label="Divide">÷</button>
+
+        <button class="calc-btn btn-digit" data-action="digit" data-val="7">7</button>
+        <button class="calc-btn btn-digit" data-action="digit" data-val="8">8</button>
+        <button class="calc-btn btn-digit" data-action="digit" data-val="9">9</button>
+        <button class="calc-btn btn-operator" data-action="op" data-val="×" aria-label="Multiply">×</button>
+
+        <button class="calc-btn btn-digit" data-action="digit" data-val="4">4</button>
+        <button class="calc-btn btn-digit" data-action="digit" data-val="5">5</button>
+        <button class="calc-btn btn-digit" data-action="digit" data-val="6">6</button>
+        <button class="calc-btn btn-operator" data-action="op" data-val="−" aria-label="Minus">−</button>
+
+        <button class="calc-btn btn-digit" data-action="digit" data-val="1">1</button>
+        <button class="calc-btn btn-digit" data-action="digit" data-val="2">2</button>
+        <button class="calc-btn btn-digit" data-action="digit" data-val="3">3</button>
+        <button class="calc-btn btn-operator" data-action="op" data-val="+" aria-label="Plus">+</button>
+
+        <button class="calc-btn btn-function" data-action="plusminus" aria-label="Negate">+/−</button>
+        <button class="calc-btn btn-digit" data-action="digit" data-val="0">0</button>
+        <button class="calc-btn btn-digit" data-action="dot" data-val=".">.</button>
+        <button class="calc-btn btn-equals" data-action="equals" aria-label="Equals">=</button>
+      </div>
+    </div>
+
+    <!-- Data View Container (Decrypted Diary Interface mounted here) -->
+    <div id="data-view-container" class="data-view-container hidden"></div>
+
+    <!-- First-Time Setup Modal (Styled like Calculator) -->
+    <div id="setup-modal" class="modal-backdrop hidden">
+      <div class="modal-card setup-card">
+        <h2 id="setup-title" class="setup-header-title">Enter your secret calculation, then press =</h2>
+        <div class="setup-input-wrap">
+          <input type="text" id="setup-input" class="setup-input-field" placeholder="e.g. 450*20-150" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        </div>
+        <p id="setup-hint" class="setup-hint">At least 8 characters, containing digits and operators (+, −, ×, ÷)</p>
+        <div class="setup-btn-row">
+          <button id="setup-next-btn" class="save-pill-btn">Next (=)</button>
+        </div>
+        <div class="setup-footer">
+          <button id="setup-restore-btn" class="setup-link-btn">Restore from backup</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reset Modal (= x100) -->
+    <div id="reset-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span id="reset-title" class="modal-title">Reset Calculation</span>
+        </div>
+        <div id="reset-body" class="modal-body"></div>
+        <div class="modal-actions">
+          <button id="reset-cancel-btn" class="cal-pill-btn">Cancel</button>
+          <button id="reset-confirm-btn" class="save-pill-btn">Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="calculator.js"></script>
+  <script>
+    // Register Service Worker for offline PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.warn('SW registration failed:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
