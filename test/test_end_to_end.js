@@ -72,17 +72,37 @@ async function runEndToEnd() {
   assert(divZero, 'Division by zero gives "Can\'t divide by zero"');
 
   // ==========================================
-  // 2. First-Time Setup Flow
+  // 2. First-Time Setup Flow (Testing Single Digit e.g. "7")
   // ==========================================
-  console.log('2. Testing First-Time Setup Flow...');
+  console.log('2. Testing First-Time Setup Flow (Single Digit Password)...');
+  const singleDigitSecret = '7';
+  const normSingleDigit = normalizeExpression(singleDigitSecret);
+  assert(normSingleDigit === '7', 'Single digit normalized correctly');
+
+  const saltSingle = crypto.getRandomValues(new Uint8Array(16));
+  const testIterations = 5000; // Fast for testing
+
+  const singleMasterKey = await generateMasterKey();
+  const singleWrapKey = await deriveKeyFromSecret(normSingleDigit, saltSingle, testIterations);
+  const singleWrapA = await wrapMasterKey(singleMasterKey, singleWrapKey);
+
+  // Unwrapping with '7' succeeds
+  const unwrapSingle = await unwrapMasterKeyWithSecret('7', saltSingle, testIterations, singleWrapA.wrapped, singleWrapA.iv);
+  assert(unwrapSingle !== null, 'Single digit "7" unwraps master key successfully');
+
+  // Unwrapping with wrong single digit '8' fails
+  let wrongDigitFailed = false;
+  try {
+    await unwrapMasterKeyWithSecret('8', saltSingle, testIterations, singleWrapA.wrapped, singleWrapA.iv);
+  } catch {
+    wrongDigitFailed = true;
+  }
+  assert(wrongDigitFailed, 'Wrong single digit "8" fails to unwrap');
+
   const secretInitial = '450*20-150';
   const normSecret = normalizeExpression(secretInitial);
-  assert(normSecret.length >= 8, 'Secret meets >= 8 characters');
-  assert(/[0-9]/.test(normSecret), 'Secret contains digits');
-  assert(/[+\-*\/%]/.test(normSecret), 'Secret contains operators');
 
   const salt1 = crypto.getRandomValues(new Uint8Array(16));
-  const testIterations = 5000; // Fast for testing
 
   const masterKey = await generateMasterKey();
   const deviceKey = await generateDeviceKey();

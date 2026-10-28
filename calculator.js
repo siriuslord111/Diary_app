@@ -159,6 +159,32 @@ class CalculatorApp {
   }
 
   handleButtonPress(action, val) {
+    if (this.isFirstTimeSetup) {
+      const inputEl = document.getElementById('setup-input');
+      if (inputEl) {
+        if (action === 'digit' || action === 'dot' || action === 'op' || action === 'paren' || action === 'percent') {
+          inputEl.value += (val || '');
+          return;
+        } else if (action === 'plusminus') {
+          if (inputEl.value.startsWith('-')) {
+            inputEl.value = inputEl.value.slice(1);
+          } else if (inputEl.value) {
+            inputEl.value = '-' + inputEl.value;
+          }
+          return;
+        } else if (action === 'backspace') {
+          inputEl.value = inputEl.value.slice(0, -1);
+          return;
+        } else if (action === 'clear') {
+          inputEl.value = '';
+          return;
+        } else if (action === 'equals') {
+          this.handleSetupStep();
+          return;
+        }
+      }
+    }
+
     if (action !== 'equals') {
       this.consecutiveEqualsCount = 0;
     }
@@ -462,7 +488,8 @@ class CalculatorApp {
 
     titleEl.textContent = 'Enter your secret calculation, then press =';
     inputEl.value = '';
-    hintEl.textContent = 'Can be any calculation or digits (e.g. a PIN, number, or formula)';
+    inputEl.placeholder = 'e.g. 7 or 1234';
+    hintEl.textContent = 'Can be any calculation, PIN, or single digit (e.g. 7)';
     hintEl.className = 'setup-hint';
 
     nextBtn.onclick = () => this.handleSetupStep();
@@ -485,7 +512,7 @@ class CalculatorApp {
 
     if (this.setupStep === 1) {
       if (normalized.length === 0) {
-        hintEl.textContent = 'Please enter a calculation or number.';
+        hintEl.textContent = 'Please enter a calculation or digit.';
         hintEl.className = 'setup-hint hint-error';
         return;
       }
@@ -494,7 +521,8 @@ class CalculatorApp {
       this.setupStep = 2;
       titleEl.textContent = 'Confirm your secret calculation, then press =';
       inputEl.value = '';
-      hintEl.textContent = 'Re-enter the exact same calculation to confirm';
+      inputEl.placeholder = 'Re-enter to confirm';
+      hintEl.textContent = 'Re-enter the exact same calculation or digit to confirm';
       hintEl.className = 'setup-hint';
       inputEl.focus();
     } else if (this.setupStep === 2) {
@@ -504,6 +532,7 @@ class CalculatorApp {
         this.setupStep = 1;
         titleEl.textContent = 'Enter your secret calculation, then press =';
         inputEl.value = '';
+        inputEl.placeholder = 'e.g. 7 or 1234';
         return;
       }
 
