@@ -381,8 +381,8 @@ class CalculatorApp {
 
     this.updateDisplay();
 
-    // Section 3: Asynchronous unlock attempt (only if length >= 8 and not in first-time setup)
-    if (!this.isFirstTimeSetup && normalized.length >= 8 && this.cachedMeta) {
+    // Section 3: Asynchronous unlock attempt (only if expression is non-empty and not in first-time setup)
+    if (!this.isFirstTimeSetup && normalized.length > 0 && this.cachedMeta) {
       this.triggerUnlockAttempt(exprToTest);
     }
   }
@@ -462,7 +462,7 @@ class CalculatorApp {
 
     titleEl.textContent = 'Enter your secret calculation, then press =';
     inputEl.value = '';
-    hintEl.textContent = 'At least 8 characters, containing digits and operators (+, −, ×, ÷)';
+    hintEl.textContent = 'Can be any calculation or digits (e.g. a PIN, number, or formula)';
     hintEl.className = 'setup-hint';
 
     nextBtn.onclick = () => this.handleSetupStep();
@@ -484,18 +484,8 @@ class CalculatorApp {
     const normalized = normalizeExpression(rawVal);
 
     if (this.setupStep === 1) {
-      if (normalized.length < 8) {
-        hintEl.textContent = 'Secret must be at least 8 characters long.';
-        hintEl.className = 'setup-hint hint-error';
-        return;
-      }
-      if (!/[0-9]/.test(normalized)) {
-        hintEl.textContent = 'Secret must contain digits.';
-        hintEl.className = 'setup-hint hint-error';
-        return;
-      }
-      if (!/[+\-*\/%]/.test(normalized)) {
-        hintEl.textContent = 'Secret must contain at least one operator (+, −, ×, ÷).';
+      if (normalized.length === 0) {
+        hintEl.textContent = 'Please enter a calculation or number.';
         hintEl.className = 'setup-hint hint-error';
         return;
       }
@@ -693,7 +683,7 @@ class CalculatorApp {
 
     bodyEl.innerHTML = `
       <label class="input-label">New Secret Calculation</label>
-      <input type="text" id="reset-new-1" class="generic-input" placeholder="At least 8 chars with operators & digits" autocomplete="off" />
+      <input type="text" id="reset-new-1" class="generic-input" placeholder="Any number or calculation" autocomplete="off" />
 
       <label class="input-label" style="margin-top:12px;">Confirm New Secret Calculation</label>
       <input type="text" id="reset-new-2" class="generic-input" placeholder="Repeat new calculation" autocomplete="off" />
@@ -709,8 +699,8 @@ class CalculatorApp {
       const val2 = document.getElementById('reset-new-2').value.trim();
       const norm1 = normalizeExpression(val1);
 
-      if (norm1.length < 8 || !/[0-9]/.test(norm1) || !/[+\-*\/%]/.test(norm1)) {
-        errBox.textContent = 'Must be at least 8 chars with digits and operators (+, −, ×, ÷).';
+      if (norm1.length === 0) {
+        errBox.textContent = 'Please enter a calculation or number.';
         return;
       }
 

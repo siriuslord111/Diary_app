@@ -5,7 +5,7 @@ import {
   normalizeExpression,
   FormatError,
   DivideByZeroError
-} from './parser.js';
+} from '../parser.js';
 
 let failed = 0;
 let passed = 0;

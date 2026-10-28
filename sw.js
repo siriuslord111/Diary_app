@@ -3,7 +3,7 @@
  * Pre-caches all assets for 100% offline functionality.
  */
 
-const CACHE_NAME = 'calculator-v1.0.0';
+const CACHE_NAME = 'calculator-v1.0.1';
 
 const PRECACHE_ASSETS = [
   './',

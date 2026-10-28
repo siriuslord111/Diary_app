@@ -9,7 +9,7 @@ import {
   deleteEncryptedEntry,
   saveAllEncryptedEntries,
   clearAllData
-} from './db.js';
+} from '../db.js';
 
 import {
   generateMasterKey,
@@ -22,14 +22,14 @@ import {
   decryptEntry,
   bufferToBase64,
   base64ToBuffer
-} from './crypto.js';
+} from '../crypto.js';
 
 import {
   evaluateExpression,
   formatNumber,
   applyRepeatOperation,
   normalizeExpression
-} from './parser.js';
+} from '../parser.js';
 
 let passed = 0;
 let failed = 0;

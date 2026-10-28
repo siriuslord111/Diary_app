@@ -969,7 +969,7 @@ export class ContentController {
           <input type="text" id="cur-secret" class="generic-input" placeholder="e.g. 2500*4+999" autocomplete="off" />
 
           <label class="input-label" style="margin-top:12px;">New Secret Calculation</label>
-          <input type="text" id="new-secret-1" class="generic-input" placeholder="At least 8 chars with operators & digits" autocomplete="off" />
+          <input type="text" id="new-secret-1" class="generic-input" placeholder="Any number or calculation" autocomplete="off" />
 
           <label class="input-label" style="margin-top:12px;">Confirm New Secret Calculation</label>
           <input type="text" id="new-secret-2" class="generic-input" placeholder="Repeat new calculation" autocomplete="off" />
@@ -1011,16 +1011,8 @@ export class ContentController {
 
       // 2. Validate new secret rules
       const normNew = normalizeExpression(new1);
-      if (normNew.length < 8) {
-        errBox.textContent = 'New secret must be at least 8 characters long.';
-        return;
-      }
-      if (!/[0-9]/.test(normNew)) {
-        errBox.textContent = 'New secret must contain digits.';
-        return;
-      }
-      if (!/[+\-*\/%]/.test(normNew)) {
-        errBox.textContent = 'New secret must contain at least one operator (+, -, ×, ÷, %).';
+      if (normNew.length === 0) {
+        errBox.textContent = 'Please enter a calculation or number.';
         return;
       }
       if (normalizeExpression(new1) !== normalizeExpression(new2)) {

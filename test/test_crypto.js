@@ -9,7 +9,7 @@ import {
   decryptEntry,
   bufferToBase64,
   base64ToBuffer
-} from './crypto.js';
+} from '../crypto.js';
 
 let passed = 0;
 let failed = 0;
