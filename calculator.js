@@ -69,6 +69,7 @@ class CalculatorApp {
 
     // Inactivity timer
     this.inactivityTimer = null;
+    this.pendingResumeEntryId = null;
 
     // Web Worker
     this.initWorker();
@@ -782,6 +783,13 @@ class CalculatorApp {
       });
       await this.contentController.init();
 
+      // If an entry draft was being written when the app locked, automatically resume editing!
+      if (this.pendingResumeEntryId) {
+        const idToResume = this.pendingResumeEntryId;
+        this.pendingResumeEntryId = null;
+        this.contentController.openEntryEditor(idToResume);
+      }
+
       // Push history state so Android back button can be trapped
       history.pushState({ unlocked: true }, '');
 
@@ -792,21 +800,32 @@ class CalculatorApp {
     }
   }
 
-  lockApp() {
+  async lockApp() {
     if (!this.isUnlocked) return;
-    this.isUnlocked = false;
 
-    // Clear inactivity timer
+    // Clear inactivity timer immediately
     if (this.inactivityTimer) {
       clearTimeout(this.inactivityTimer);
       this.inactivityTimer = null;
     }
 
-    // Purge content controller and decrypted memory
+    // Flush any pending entry autosaves before wiping the master key!
+    let resumeDraftId = null;
     if (this.contentController) {
+      try {
+        resumeDraftId = await this.contentController.flushAutoSave();
+      } catch (err) {
+        console.error('Error during auto-save flush:', err);
+      }
       this.contentController.destroy();
       this.contentController = null;
     }
+
+    this.pendingResumeEntryId = resumeDraftId;
+    this.isUnlocked = false;
+
+    // Clean up any stray modals or overlays from document.body
+    document.querySelectorAll('.editor-overlay, .modal-backdrop, .app-toast').forEach(el => el.remove());
 
     // Clear UI and swap back to calculator
     this.dataViewContainer.innerHTML = '';
@@ -835,31 +854,37 @@ class CalculatorApp {
     };
 
     // Instant lock on tab hide / app backgrounding
-    document.addEventListener('visibilitychange', () => {
+    document.addEventListener('visibilitychange', async () => {
       if (document.hidden) {
         activateShield();
-        this.lockApp();
+        await this.lockApp();
       } else {
         deactivateShield();
       }
     });
 
-    // Instant lock on window blur / loss of focus
-    window.addEventListener('blur', () => {
-      activateShield();
-      this.lockApp();
+    // Window blur: lock if user switches window/app, but ignore if selecting date/time/file picker
+    window.addEventListener('blur', async () => {
+      const activeTag = document.activeElement?.tagName;
+      const activeType = document.activeElement?.type;
+      const isNativePicker = activeTag === 'INPUT' && (activeType === 'date' || activeType === 'time' || activeType === 'file');
+
+      if (!isNativePicker) {
+        activateShield();
+        await this.lockApp();
+      }
     });
 
     // Page hide / freeze
-    window.addEventListener('pagehide', () => {
+    window.addEventListener('pagehide', async () => {
       activateShield();
-      this.lockApp();
+      await this.lockApp();
     });
 
     // Android back button: intercept popstate
-    window.addEventListener('popstate', (e) => {
+    window.addEventListener('popstate', async (e) => {
       if (this.isUnlocked) {
-        this.lockApp();
+        await this.lockApp();
       }
     });
 
@@ -877,8 +902,8 @@ class CalculatorApp {
 
   resetInactivityTimer() {
     if (this.inactivityTimer) clearTimeout(this.inactivityTimer);
-    this.inactivityTimer = setTimeout(() => {
-      this.lockApp();
+    this.inactivityTimer = setTimeout(async () => {
+      await this.lockApp();
     }, 60000); // 1 minute
   }
 }

@@ -4,7 +4,7 @@
  * Uses Network-First for navigation so updates on GitHub Pages load immediately when online.
  */
 
-const CACHE_NAME = 'calculator-v1.0.4';
+const CACHE_NAME = 'calculator-v1.0.5';
 
 const PRECACHE_ASSETS = [
   './',

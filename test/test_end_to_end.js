@@ -350,6 +350,25 @@ async function runEndToEnd() {
   const restoredDec1 = await decryptEntry(freshDbEntries.find(e => e.id === 'entry-1'), restoredMasterKey);
   assert(restoredDec1.text === 'Morning entry at 9:42 AM.', 'Restored entry text matches exactly');
 
+  // ==========================================
+  // 9. Testing Auto-Save on Background / Switch
+  // ==========================================
+  console.log('9. Testing Auto-Save Draft Flush...');
+  const autoSaveEntry = {
+    id: crypto.randomUUID(),
+    createdAt: Date.now(),
+    editedAt: Date.now(),
+    text: 'Draft entry in progress before app switch'
+  };
+  const encAutoSave = await encryptEntry(autoSaveEntry, restoredMasterKey);
+  await saveEncryptedEntry(encAutoSave);
+
+  const autoSaveRecs = await getAllEncryptedEntries();
+  const foundDraft = autoSaveRecs.find(e => e.id === autoSaveEntry.id);
+  assert(foundDraft !== undefined, 'In-progress draft encrypted and saved to storage');
+  const decDraft = await decryptEntry(foundDraft, restoredMasterKey);
+  assert(decDraft.text === 'Draft entry in progress before app switch', 'Decrypted draft preserves full text');
+
   console.log(`\nAll End-to-End Tests Succeeded: ${passed} passed, ${failed} failed.`);
   if (failed > 0) process.exit(1);
 }

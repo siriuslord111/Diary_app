@@ -48,6 +48,10 @@ export class ContentController {
     this.draftText = '';
     this.draftTimestamp = Date.now();
     this.autoSaveTimer = null;
+    this.activeEditorModal = null;
+    this.activeEditorTextarea = null;
+    this.activeEditorDateInput = null;
+    this.activeEditorTimeInput = null;
 
     // Touch swipe handling
     this.touchStartX = 0;
@@ -124,6 +128,15 @@ export class ContentController {
       clearTimeout(this.autoSaveTimer);
       this.autoSaveTimer = null;
     }
+    if (this.activeEditorModal) {
+      this.activeEditorModal.remove();
+      this.activeEditorModal = null;
+    }
+    this.activeEditorTextarea = null;
+    this.activeEditorDateInput = null;
+    this.activeEditorTimeInput = null;
+    this.currentEditingId = null;
+
     // Wipe all sensitive references from memory
     this.masterKey = null;
     this.entries = [];
@@ -717,31 +730,13 @@ export class ContentController {
       syncViewport();
     }
 
-    const closeModal = () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', syncViewport);
-        window.visualViewport.removeEventListener('scroll', syncViewport);
-      }
-      modal.remove();
-    };
-
-    // Keep active typing line visible as the user writes unlimited lines
-    const keepCursorVisible = () => {
-      if (textarea.selectionEnd >= textarea.value.length - 2) {
-        textarea.scrollTop = textarea.scrollHeight;
-      }
-    };
-
-    // Auto-save draft changes in memory and debounce to storage
-    textarea.oninput = () => {
-      this.draftText = textarea.value;
-      keepCursorVisible();
-      this.triggerAutoSave();
-    };
-    textarea.onkeyup = keepCursorVisible;
-
     const dateInput = modal.querySelector('#editor-input-date');
     const timeInput = modal.querySelector('#editor-input-time');
+
+    this.activeEditorModal = modal;
+    this.activeEditorTextarea = textarea;
+    this.activeEditorDateInput = dateInput;
+    this.activeEditorTimeInput = timeInput;
 
     const updateTimestampFromInputs = () => {
       const [y, m, d] = dateInput.value.split('-').map(Number);
@@ -753,13 +748,32 @@ export class ContentController {
     dateInput.onchange = updateTimestampFromInputs;
     timeInput.onchange = updateTimestampFromInputs;
 
-    modal.querySelector('#editor-btn-close').onclick = () => {
+    const closeModal = () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', syncViewport);
+        window.visualViewport.removeEventListener('scroll', syncViewport);
+      }
+      this.activeEditorModal = null;
+      this.activeEditorTextarea = null;
+      this.activeEditorDateInput = null;
+      this.activeEditorTimeInput = null;
+      this.currentEditingId = null;
+      this.draftText = '';
+      modal.remove();
+    };
+
+    modal.querySelector('#editor-btn-close').onclick = async () => {
+      updateTimestampFromInputs();
+      if (this.draftText && this.draftText.trim()) {
+        await this.commitEntry(false);
+      }
       closeModal();
+      this.render();
     };
 
     modal.querySelector('#editor-btn-save').onclick = async () => {
       updateTimestampFromInputs();
-      await this.commitEntry();
+      await this.commitEntry(false);
       closeModal();
       this.render();
     };
@@ -775,18 +789,50 @@ export class ContentController {
     }
   }
 
+  async flushAutoSave() {
+    if (this.autoSaveTimer) {
+      clearTimeout(this.autoSaveTimer);
+      this.autoSaveTimer = null;
+    }
+    if (this.activeEditorTextarea) {
+      this.draftText = this.activeEditorTextarea.value;
+    }
+    if (this.activeEditorDateInput && this.activeEditorTimeInput) {
+      const [y, m, d] = this.activeEditorDateInput.value.split('-').map(Number);
+      const [h, min] = this.activeEditorTimeInput.value.split(':').map(Number);
+      if (y && m && d) {
+        const newD = new Date(y, m - 1, d, h || 0, min || 0, 0);
+        this.draftTimestamp = newD.getTime();
+      }
+    }
+    if (this.draftText && this.draftText.trim() && this.masterKey) {
+      await this.commitEntry(false);
+      return this.currentEditingId;
+    }
+    return null;
+  }
+
   triggerAutoSave() {
     if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer);
     this.autoSaveTimer = setTimeout(async () => {
-      if (this.currentEditingId && this.draftText.trim()) {
+      if (this.activeEditorTextarea) {
+        this.draftText = this.activeEditorTextarea.value;
+      }
+      if (this.draftText && this.draftText.trim() && this.masterKey) {
         await this.commitEntry(false);
       }
-    }, 1000);
+    }, 400);
   }
 
   async commitEntry(renderAfter = true) {
     const text = this.draftText.trim();
-    if (!text) return;
+    if (!text) {
+      if (this.currentEditingId) {
+        await this.deleteEntry(this.currentEditingId);
+        this.currentEditingId = null;
+      }
+      return;
+    }
 
     let targetEntry;
     const now = Date.now();
