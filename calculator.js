@@ -765,6 +765,7 @@ class CalculatorApp {
   async unlockDiary(masterKey) {
     if (this.isUnlocked) return;
     this.isUnlocked = true;
+    this.deactivateShield();
 
     // Reset calculator inputs
     this.currentExpr = '';
@@ -831,6 +832,7 @@ class CalculatorApp {
     this.dataViewContainer.innerHTML = '';
     this.dataViewContainer.classList.add('hidden');
     this.calcScreen.classList.remove('hidden');
+    this.deactivateShield();
 
     this.consecutiveEqualsCount = 0;
     this.currentExpr = '';
@@ -840,44 +842,50 @@ class CalculatorApp {
     this.updateDisplay();
   }
 
+  activateShield() {
+    if (this.isUnlocked) {
+      this.privacyShield.classList.add('active');
+    }
+  }
+
+  deactivateShield() {
+    this.privacyShield.classList.remove('active');
+  }
+
   // --- Privacy & Auto-Lock Handlers ---
 
   attachPrivacyAndLifecycleListeners() {
-    const activateShield = () => {
-      if (this.isUnlocked) {
-        this.privacyShield.classList.add('active');
-      }
-    };
-
-    const deactivateShield = () => {
-      this.privacyShield.classList.remove('active');
-    };
-
     // Instant lock on tab hide / app backgrounding
     document.addEventListener('visibilitychange', async () => {
       if (document.hidden) {
-        activateShield();
+        this.activateShield();
         await this.lockApp();
       } else {
-        deactivateShield();
+        this.deactivateShield();
       }
     });
 
-    // Window blur: lock if user switches window/app, but ignore if selecting date/time/file picker
-    window.addEventListener('blur', async () => {
-      const activeTag = document.activeElement?.tagName;
-      const activeType = document.activeElement?.type;
-      const isNativePicker = activeTag === 'INPUT' && (activeType === 'date' || activeType === 'time' || activeType === 'file');
+    // Window focus: ensure shield is deactivated
+    window.addEventListener('focus', () => {
+      this.deactivateShield();
+    });
 
-      if (!isNativePicker) {
-        activateShield();
+    // Window blur: on desktop, lock when user switches away from the window.
+    // On mobile, app switching is handled by visibilitychange and pagehide.
+    // Never lock if the user is typing in a textarea or input!
+    window.addEventListener('blur', async () => {
+      if (document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT')) {
+        return;
+      }
+      if (document.hidden) {
+        this.activateShield();
         await this.lockApp();
       }
     });
 
     // Page hide / freeze
     window.addEventListener('pagehide', async () => {
-      activateShield();
+      this.activateShield();
       await this.lockApp();
     });
 

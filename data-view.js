@@ -738,6 +738,20 @@ export class ContentController {
     this.activeEditorDateInput = dateInput;
     this.activeEditorTimeInput = timeInput;
 
+    const keepCursorVisible = () => {
+      if (textarea.selectionEnd >= textarea.value.length - 2) {
+        textarea.scrollTop = textarea.scrollHeight;
+      }
+    };
+
+    // Auto-save draft changes in memory and debounce to storage
+    textarea.oninput = () => {
+      this.draftText = textarea.value;
+      keepCursorVisible();
+      this.triggerAutoSave();
+    };
+    textarea.onkeyup = keepCursorVisible;
+
     const updateTimestampFromInputs = () => {
       const [y, m, d] = dateInput.value.split('-').map(Number);
       const [h, min] = timeInput.value.split(':').map(Number);
@@ -763,6 +777,7 @@ export class ContentController {
     };
 
     modal.querySelector('#editor-btn-close').onclick = async () => {
+      this.draftText = textarea.value;
       updateTimestampFromInputs();
       if (this.draftText && this.draftText.trim()) {
         await this.commitEntry(false);
@@ -772,6 +787,7 @@ export class ContentController {
     };
 
     modal.querySelector('#editor-btn-save').onclick = async () => {
+      this.draftText = textarea.value;
       updateTimestampFromInputs();
       await this.commitEntry(false);
       closeModal();
@@ -825,6 +841,9 @@ export class ContentController {
   }
 
   async commitEntry(renderAfter = true) {
+    if (this.activeEditorTextarea) {
+      this.draftText = this.activeEditorTextarea.value;
+    }
     const text = this.draftText.trim();
     if (!text) {
       if (this.currentEditingId) {
@@ -843,6 +862,14 @@ export class ContentController {
         targetEntry.text = text;
         targetEntry.createdAt = this.draftTimestamp;
         targetEntry.editedAt = now;
+      } else {
+        targetEntry = {
+          id: this.currentEditingId,
+          createdAt: this.draftTimestamp,
+          editedAt: now,
+          text: text
+        };
+        this.entries.push(targetEntry);
       }
     } else {
       targetEntry = {
