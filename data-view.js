@@ -690,7 +690,7 @@ export class ContentController {
         </header>
 
         <div class="editor-body">
-          <textarea id="editor-textarea" class="editor-textarea" placeholder="Write here...">${this.escapeHtml(this.draftText)}</textarea>
+          <textarea id="editor-textarea" class="editor-textarea" placeholder="Write here..."></textarea>
         </div>
       </div>
     `;
@@ -698,15 +698,47 @@ export class ContentController {
     document.body.appendChild(modal);
 
     const textarea = modal.querySelector('#editor-textarea');
+    textarea.value = this.draftText;
     textarea.focus();
     // Move cursor to end
     textarea.selectionStart = textarea.selectionEnd = textarea.value.length;
 
+    // Dynamically adjust editor height to match visible area above virtual keyboard
+    const syncViewport = () => {
+      if (window.visualViewport) {
+        modal.style.height = `${window.visualViewport.height}px`;
+        modal.style.top = `${window.visualViewport.offsetTop}px`;
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', syncViewport);
+      window.visualViewport.addEventListener('scroll', syncViewport);
+      syncViewport();
+    }
+
+    const closeModal = () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', syncViewport);
+        window.visualViewport.removeEventListener('scroll', syncViewport);
+      }
+      modal.remove();
+    };
+
+    // Keep active typing line visible as the user writes unlimited lines
+    const keepCursorVisible = () => {
+      if (textarea.selectionEnd >= textarea.value.length - 2) {
+        textarea.scrollTop = textarea.scrollHeight;
+      }
+    };
+
     // Auto-save draft changes in memory and debounce to storage
     textarea.oninput = () => {
       this.draftText = textarea.value;
+      keepCursorVisible();
       this.triggerAutoSave();
     };
+    textarea.onkeyup = keepCursorVisible;
 
     const dateInput = modal.querySelector('#editor-input-date');
     const timeInput = modal.querySelector('#editor-input-time');
@@ -722,13 +754,13 @@ export class ContentController {
     timeInput.onchange = updateTimestampFromInputs;
 
     modal.querySelector('#editor-btn-close').onclick = () => {
-      modal.remove();
+      closeModal();
     };
 
     modal.querySelector('#editor-btn-save').onclick = async () => {
       updateTimestampFromInputs();
       await this.commitEntry();
-      modal.remove();
+      closeModal();
       this.render();
     };
 
@@ -736,7 +768,7 @@ export class ContentController {
       modal.querySelector('#editor-btn-delete').onclick = () => {
         this.confirmAction('Delete this entry?', async () => {
           await this.deleteEntry(entryId);
-          modal.remove();
+          closeModal();
           this.render();
         });
       };
